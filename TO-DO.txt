@@ -1,0 +1,18 @@
+TO-DO:::
+    run server.js
+    ngrok --- change link in webhook workflow
+
+Code by yourself
+DO::
+    use the fetched data from INTERN Account
+    use the contact_id in post/put method
+
+    if contact_id found, use PUT method to update
+    if not, use POST method to create
+
+use the last coding:
+    postContacts
+    putContacts
+
+
+ps: i think get contacts (plural) is deprecated in GHL API Documentation,, so use the contact_id to search a specific contact
