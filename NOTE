@@ -1,0 +1,24 @@
+NOLA CRM → NOLA CRM Contact Sync Plan (Step-by-Step)
+Objective: Automatically sync contacts from INTERN Account → NOLA EventPro CRM in the same agency when a contact is created or updated.
+
+1.Prepare Private Integration
+    Log in to INTERN Account
+    Navigate to Settings → Private Integrations
+    Click Create New Integration
+    Fill in:
+        Name: Account Sync
+        Description: Optional
+        Select Scopes needed for contacts:
+            contacts.read → read contacts
+            contacts.write → create/update contacts (optional for now)
+    Save → you’ll get an Access Token 
+
+This token will be used by your middleware to read contact data from Account 1
+Note: For NOLA EventPro CRM, we will get a separate Private Integration Access Token later when sending data.
+
+2.Make a workflow
+Trigger: 
+    Create Contact
+    Update Contact
+Action: 
+    Webhook (POST)
