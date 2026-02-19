@@ -7,33 +7,54 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
-const LOCATION_ID = process.env.LOCATION_ID;
+
 
 app.use(express.json());
 
 // this is the endpoint the webhook will call
 app.post('/webhook/nola', async (req, res) => {
+  const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
+  const LOCATION_ID = process.env.LOCATION_ID;
+
   const contact = req.body;
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
+  const source_contact_id = contact.contact_id; //haba naman variable name ya
+
   try {
-    // Step 1: Search for existing contact in MAIN by custom field intern_contact_id
-    const searchResponse = await axios.get(
-      'https://services.leadconnectorhq.com/contacts/',
+    // Step 1: Fetch all contacts from NOLA (or apply allowed filters like email)
+    const response = await axios.get(
+      `https://services.leadconnectorhq.com/contacts`,
       {
         headers: {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
-          Version: '2021-07-28'
+          Accept: 'application/json',
+          Version: '2021-07-28',
+          Authorization: `Bearer ${ACCESS_TOKEN}`
         },
         params: {
-          query: contact.contact_id
+          locationId: LOCATION_ID,
+          limit: 100  // optional, you can page if more than 100
         }
       }
     );
 
-    const existingContact = searchResponse.data.contacts?.[0];
+    // Step 2: Filter in code by custom field intern_contact_id
+    const existingContact = response.data.contacts.find(
+      c => c.customFields?.intern_contact_id === source_contact_id
+    );
+    
+    console.log('Existing NOLA contact:', existingContact);
 
+    // Next: decide update or create based on existingContact
+    if (existingContact) {
+      console.log('Contact already exists in NOLA. Ready to update.');
+    } else {
+      console.log('Contact does not exist in NOLA. Ready to create.');
+    }
+
+    res.sendStatus(200);
+
+/*
     if (existingContact) {
       // Step 2A: Update existing contact
       await axios.put(
@@ -76,8 +97,8 @@ app.post('/webhook/nola', async (req, res) => {
       );
       console.log('✅ Created contact in NOLA EventPro CRM');
     }
-
-    res.status(200).send('Synced');
+*/
+    //res.status(200).send('Synced');
   } catch (error) {
     console.error('Axios error:', error.response?.data || error.message);
     res.status(500).send('Error syncing');

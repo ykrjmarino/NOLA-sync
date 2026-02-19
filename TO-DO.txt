@@ -15,4 +15,11 @@ use the last coding:
     putContacts
 
 
-ps: i think get contacts (plural) is deprecated in GHL API Documentation,, so use the contact_id to search a specific contact
+ps: 
+    i think get contacts (plural) is deprecated in GHL API Documentation,, so use the contact_id to search a specific contact
+
+    we use diff custom fields:: 
+        para malaman kung aling contacts yung galing sa INTERN accounts
+        para hindi fully mixed yung contacts from INTERN and NOLA EventPro CRM
+        contacts from INTERN Account should have a separate group
+        can't search NOLA contact_id because it assigns its own unique contact id
