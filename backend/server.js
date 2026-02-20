@@ -89,8 +89,22 @@ app.post('/webhook/nola', async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.error('Error creating contact in NOLA x:', error.response?.data || error.message);
-    res.status(500).send('Error syncing');
+    const errData = error.response?.data;
+
+    const isDuplicateEmail =
+      error.response?.status === 400 &&
+      errData?.message?.includes('does not allow duplicated contacts') &&
+      errData?.meta?.matchingField === 'email';
+      //only skip when it is specifically the duplicate email error
+      //not all 400 errors should be ignored
+
+    if (isDuplicateEmail) {
+      console.log('Duplicate email found. Skipping creation. Existing contact ID:', errData.meta.contactId);
+      return res.json({ status: 'skipped', reason: 'duplicate email' });
+    } else {
+      console.error('Error creating contact in NOLA x:', errData || error.message);
+      return res.json({ status: 'Error syncing' });
+    }
   }
 });
 
