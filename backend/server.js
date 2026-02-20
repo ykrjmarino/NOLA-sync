@@ -42,7 +42,7 @@ app.post('/webhook/nola', async (req, res) => {
 
     // Step 2: Filter in code by custom field intern_contact_id
     const existingContact = response.data.contacts.find(c =>
-      c.customFields?.some(f => f.fieldKey === "contact.intern_contact_id" && f.value === source_contact_id)
+      c.customFields?.some(f => f.key === "my_custom_field" && f.field_value === source_contact_id)
     );
         
     console.log('Existing NOLA contact:', existingContact);
@@ -59,8 +59,9 @@ app.post('/webhook/nola', async (req, res) => {
         ...(contact.phone ? { phone: contact.phone } : {}),
         customFields: [
           {
+            id: "fStKe80SsiHwXMsy5toO", 
             key: "contact.intern_contact_id",
-            value: source_contact_id
+            field_value: source_contact_id
           }
         ]
       };
@@ -112,8 +113,9 @@ app.post('/webhook/nola', async (req, res) => {
         ...(contact.phone ? { phone: contact.phone } : {}),
         customFields: [
           {
+            id: "fStKe80SsiHwXMsy5toO", 
             key: "contact.intern_contact_id",
-            value: source_contact_id
+            field_value: source_contact_id
           }
         ],
         locationId: LOCATION_ID
@@ -139,17 +141,13 @@ app.post('/webhook/nola', async (req, res) => {
 
       // check if intern_contact_id is present
       const createdCustomFields = createResponse.data.contact.customFields || [];
-      const internIdField = createdCustomFields.find(f => f.name === 'intern_contact_id');
-
+      const internIdField = createdCustomFields.find(f => f.id === 'fStKe80SsiHwXMsy5toO');
       if (internIdField) {
         console.log('✅ intern_contact_id saved:', internIdField.value);
       } else {
         console.warn('⚠️ intern_contact_id not saved in customFields!');
       }
     }
-
-    
-
     res.sendStatus(200);
   } catch (error) {
     const errData = error.response?.data;
