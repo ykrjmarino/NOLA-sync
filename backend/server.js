@@ -17,6 +17,7 @@ app.post('/webhook/nola', async (req, res) => {
   const LOCATION_ID = process.env.LOCATION_ID;
 
   const contact = req.body;
+  console.log('Received full body:', contact);
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
   const source_contact_id = contact.contact_id; //haba naman variable name ya
@@ -47,60 +48,48 @@ app.post('/webhook/nola', async (req, res) => {
 
     // Next: decide update or create based on existingContact
     if (existingContact) {
-      console.log('Contact already exists in NOLA. Ready to update.');
+      console.log('Contact already exists in NOLA. Ready to UPDATE.');
     } else {
-      console.log('Contact does not exist in NOLA. Ready to create.');
+      console.log('Contact does NOT exist in NOLA. Ready to CREATE.');
+
+      const now = new Date().toISOString(); //timestamp if needed
+
+      const createData = {
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        name: contact.full_name || `${contact.first_name} ${contact.last_name}`,
+        ...(contact.email ? { email: contact.email } : {}),   // only include if exists
+        ...(contact.phone ? { phone: contact.phone } : {}),
+        country: contact.country || '',
+        address1: contact.location?.address || '',
+        city: contact.location?.city || '',
+        state: contact.location?.state || '',
+        postalCode: contact.location?.postalCode || '',
+        customFields: [
+          { name: 'intern_contact_id', value: contact.contact_id }
+        ],
+        locationId: process.env.LOCATION_ID
+    };
+
+    const createResponse = await axios.post(
+      'https://services.leadconnectorhq.com/contacts',
+      createData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Version: '2021-07-28',
+          Authorization: `Bearer ${ACCESS_TOKEN}`
+        }
+      }
+    );
+
+    console.log('Created new NOLA contact:', createResponse.data);
     }
 
     res.sendStatus(200);
-
-/*
-    if (existingContact) {
-      // Step 2A: Update existing contact
-      await axios.put(
-        `https://services.leadconnectorhq.com/contacts/${existingContact.id}`,
-        {
-          firstName: contact.first_name,
-          lastName: contact.last_name,
-          locationId: LOCATION_ID
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN}`,
-            Version: '2021-07-28'
-          }
-        }
-      );
-      console.log('✅ Updated contact in NOLA EventPro CRM Account');
-    } else {
-      // Step 2B: Create new contact
-      await axios.post(
-        'https://services.leadconnectorhq.com/contacts/',
-        {
-          firstName: contact.first_name,
-          lastName: contact.last_name,
-          locationId: LOCATION_ID,
-          customFields: [
-            {
-              key: 'intern_contact_id',
-              value: contact.contact_id
-            }
-          ]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN}`,
-            Version: '2021-07-28',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      console.log('✅ Created contact in NOLA EventPro CRM');
-    }
-*/
-    //res.status(200).send('Synced');
   } catch (error) {
-    console.error('Axios error:', error.response?.data || error.message);
+    console.error('Error creating contact in NOLA x:', error.response?.data || error.message);
     res.status(500).send('Error syncing');
   }
 });
