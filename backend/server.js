@@ -17,6 +17,7 @@ app.post('/webhook/nola', async (req, res) => {
   const LOCATION_ID = process.env.LOCATION_ID;
 
   const contact = req.body;
+  console.log('==================================================');
   console.log('Received full body:', contact);
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
@@ -40,15 +41,64 @@ app.post('/webhook/nola', async (req, res) => {
     );
 
     // Step 2: Filter in code by custom field intern_contact_id
-    const existingContact = response.data.contacts.find(
-      c => c.customFields?.intern_contact_id === source_contact_id
+    const existingContact = response.data.contacts.find(c =>
+      c.customFields?.some(f => f.fieldKey === "contact.intern_contact_id" && f.value === source_contact_id)
     );
-    
+        
     console.log('Existing NOLA contact:', existingContact);
 
     // Next: decide update or create based on existingContact
     if (existingContact) {
       console.log('Contact already exists in NOLA. Ready to UPDATE.');
+
+      const updateData = {
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        name: contact.full_name || `${contact.first_name} ${contact.last_name}`,
+        ...(contact.email ? { email: contact.email } : {}),
+        ...(contact.phone ? { phone: contact.phone } : {}),
+        customFields: [
+          {
+            key: "contact.intern_contact_id",
+            value: source_contact_id
+          }
+        ]
+      };
+
+      // <-- ADD THIS LOG
+      console.log('📤 Payload to NOLA (update):', JSON.stringify(updateData, null, 2));
+
+      try {
+        const updateResponse = await axios.put(
+          `https://services.leadconnectorhq.com/contacts/${existingContact.id}`,
+          updateData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Version: '2021-07-28',
+              Authorization: `Bearer ${ACCESS_TOKEN}`
+            }
+          }
+        );
+
+        console.log('Updated NOLA contact:', updateResponse.data);
+      } catch (error) {
+        const errData = error.response?.data;
+        const isDuplicateEmail =
+          error.response?.status === 400 &&
+          errData?.message?.includes('does not allow duplicated contacts') &&
+          errData?.meta?.matchingField === 'email';
+
+        if (isDuplicateEmail) {
+          console.log(
+            'Duplicate email found during update. Skipping. Existing contact ID:',
+            errData.meta.contactId
+          );
+        } else {
+          console.error('Error updating contact in NOLA:', errData || error.message);
+        }
+      }
     } else {
       console.log('Contact does NOT exist in NOLA. Ready to CREATE.');
 
@@ -58,34 +108,47 @@ app.post('/webhook/nola', async (req, res) => {
         firstName: contact.first_name,
         lastName: contact.last_name,
         name: contact.full_name || `${contact.first_name} ${contact.last_name}`,
-        ...(contact.email ? { email: contact.email } : {}),   // only include if exists
+        ...(contact.email ? { email: contact.email } : {}),
         ...(contact.phone ? { phone: contact.phone } : {}),
-        country: contact.country || '',
-        address1: contact.location?.address || '',
-        city: contact.location?.city || '',
-        state: contact.location?.state || '',
-        postalCode: contact.location?.postalCode || '',
         customFields: [
-          { name: 'intern_contact_id', value: contact.contact_id }
+          {
+            key: "contact.intern_contact_id",
+            value: source_contact_id
+          }
         ],
-        locationId: process.env.LOCATION_ID
-    };
+        locationId: LOCATION_ID
+      };
 
-    const createResponse = await axios.post(
-      'https://services.leadconnectorhq.com/contacts',
-      createData,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Version: '2021-07-28',
-          Authorization: `Bearer ${ACCESS_TOKEN}`
+      // <-- ADD THIS LOG
+      console.log('📤 Payload to NOLA (create):', JSON.stringify(createData, null, 2));
+
+      const createResponse = await axios.post(
+        'https://services.leadconnectorhq.com/contacts',
+        createData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Version: '2021-07-28',
+            Authorization: `Bearer ${ACCESS_TOKEN}`
+          }
         }
-      }
-    );
+      );
 
-    console.log('Created new NOLA contact:', createResponse.data);
+      console.log('Created new NOLA contact:', createResponse.data);
+
+      // check if intern_contact_id is present
+      const createdCustomFields = createResponse.data.contact.customFields || [];
+      const internIdField = createdCustomFields.find(f => f.name === 'intern_contact_id');
+
+      if (internIdField) {
+        console.log('✅ intern_contact_id saved:', internIdField.value);
+      } else {
+        console.warn('⚠️ intern_contact_id not saved in customFields!');
+      }
     }
+
+    
 
     res.sendStatus(200);
   } catch (error) {
