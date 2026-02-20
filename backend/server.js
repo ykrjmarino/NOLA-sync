@@ -18,7 +18,7 @@ app.post('/webhook/nola', async (req, res) => {
 
   const contact = req.body;
   console.log('==================================================');
-  console.log('Received full body:', contact);
+  // console.log('Received full body:', contact);
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
   const source_contact_id = contact.contact_id; //haba naman variable name ya
@@ -42,8 +42,11 @@ app.post('/webhook/nola', async (req, res) => {
 
     // Step 2: Filter in code by custom field intern_contact_id
     const existingContact = response.data.contacts.find(c =>
-      c.customFields?.some(f => f.key === "my_custom_field" && f.field_value === source_contact_id)
+      c.customFields?.some(f => f.id === 'fStKe80SsiHwXMsy5toO' && f.value === source_contact_id)
     );
+    // const existingContact = response.data.contacts.find(c =>
+    //   c.customFields?.some(f => f.id === 'fStKe80SsiHwXMsy5toO' && f.field_value === source_contact_id)
+    // );
         
     console.log('Existing NOLA contact:', existingContact);
 
@@ -59,7 +62,7 @@ app.post('/webhook/nola', async (req, res) => {
         ...(contact.phone ? { phone: contact.phone } : {}),
         customFields: [
           {
-            id: "fStKe80SsiHwXMsy5toO", 
+            id: "fStKe80SsiHwXMsy5toO", //is the id of our custom field na antagal ko hinanap
             key: "contact.intern_contact_id",
             field_value: source_contact_id
           }
