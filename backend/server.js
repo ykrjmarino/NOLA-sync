@@ -2,29 +2,27 @@ import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
-
 dotenv.config(); 
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-
 app.use(express.json());
 
-// this is the endpoint the webhook will call
+//this is the endpoint the webhook will call
 app.post('/webhook/nola', async (req, res) => {
   const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
   const LOCATION_ID = process.env.LOCATION_ID;
 
   const contact = req.body;
   console.log('==================================================');
-  // console.log('Received full body:', contact);
+  //console.log('Received full body:', contact);
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
   const source_contact_id = contact.contact_id; //haba naman variable name ya
 
   try {
-    // Step 1: Fetch all contacts from NOLA (or apply allowed filters like email)
+    //fetch all contacts from NOLA (or apply allowed filters like email)
     const response = await axios.get(
       `https://services.leadconnectorhq.com/contacts`,
       {
@@ -40,10 +38,11 @@ app.post('/webhook/nola', async (req, res) => {
       }
     );
 
-    // Step 2: Filter in code by custom field intern_contact_id
+    //filter in code by custom field intern_contact_id
     const existingContact = response.data.contacts.find(c =>
       c.customFields?.some(f => f.id === 'fStKe80SsiHwXMsy5toO' && f.value === source_contact_id)
     );
+    // lol, mali pala to, tagal ko nagdebug tas yan lang.. for memories::
     // const existingContact = response.data.contacts.find(c =>
     //   c.customFields?.some(f => f.id === 'fStKe80SsiHwXMsy5toO' && f.field_value === source_contact_id)
     // );
@@ -69,7 +68,6 @@ app.post('/webhook/nola', async (req, res) => {
         ]
       };
 
-      // <-- ADD THIS LOG
       console.log('📤 Payload to NOLA (update):', JSON.stringify(updateData, null, 2));
 
       try {
@@ -124,7 +122,6 @@ app.post('/webhook/nola', async (req, res) => {
         locationId: LOCATION_ID
       };
 
-      // <-- ADD THIS LOG
       console.log('📤 Payload to NOLA (create):', JSON.stringify(createData, null, 2));
 
       const createResponse = await axios.post(
@@ -142,7 +139,7 @@ app.post('/webhook/nola', async (req, res) => {
 
       console.log('Created new NOLA contact:', createResponse.data);
 
-      // check if intern_contact_id is present
+      //check if intern_contact_id is present
       const createdCustomFields = createResponse.data.contact.customFields || [];
       const internIdField = createdCustomFields.find(f => f.id === 'fStKe80SsiHwXMsy5toO');
       if (internIdField) {
