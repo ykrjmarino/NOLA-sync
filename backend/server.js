@@ -125,6 +125,10 @@ app.post('/webhook/nola', async (req, res) => {
     if (existingContact) {
       console.log('----------');
       console.log('Contact already exists in NOLA. Ready to UPDATE.');
+      const existingTags = existingContact.tags || [];
+      const mergedTags = triggered_tag
+        ? [...new Set([...existingTags, triggered_tag])]
+        : existingTags;
 
       const updateData = {
         firstName: contact.first_name,
@@ -132,7 +136,7 @@ app.post('/webhook/nola', async (req, res) => {
         name: contact.full_name || `${contact.first_name} ${contact.last_name}`,
         ...(contact.email ? { email: contact.email } : {}),
         ...(contact.phone ? { phone: contact.phone } : {}),
-        tags: triggered_tag ? [triggered_tag] : [],
+        tags: mergedTags,
         customFields: [
           {
             id: CUSTOM_FIELD_ID, //is the id of our custom field na antagal ko hinanap
