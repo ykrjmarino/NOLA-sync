@@ -76,9 +76,10 @@ app.post('/webhook/nola', async (req, res) => {
   const accessToken = tokens.access_token;
   const locationId = tokens.locationId;
 
-  // HighLevel sends the payload as a single key
-  const rawPayload = Object.keys(req.body)[0];
-  const contact = JSON.parse(rawPayload); // now you get proper fields
+  // // HighLevel sends the payload as a single key
+  // const rawPayload = Object.keys(req.body)[0];
+  // const contact = JSON.parse(rawPayload); // now you get proper fields
+  const contact = req.body.data;
 
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
@@ -89,7 +90,7 @@ app.post('/webhook/nola', async (req, res) => {
   //console.log('Received full body:', contact);
   console.log('Received contact:', contact.contact_id, contact.first_name, contact.last_name);
 
-  const source_contact_id = contact.contact_id; //haba naman variable name ya
+  const source_contact_id = contact.intern_contact_id || req.body.extras.contactId; //haba naman variable name ya
 
   try {
     //fetch all contacts from NOLA (or apply allowed filters like email)
@@ -118,7 +119,10 @@ app.post('/webhook/nola', async (req, res) => {
     const existingContact = response.data.contacts.find(c =>
       c.customFields?.some(f => f.id === CUSTOM_FIELD_ID && f.field_value === source_contact_id)
     );
-        
+    console.log('source_contact_id:', source_contact_id);
+    console.log('Total contacts:', response.data.contacts.length);
+
+
     console.log('Existing NOLA contact:', existingContact);
 
     //Next: decide update or create based on existingContact
